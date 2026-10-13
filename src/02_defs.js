@@ -34,9 +34,81 @@ const ENEMIES = {
   swarm:  { name:'Swarm',  hp:18,   spd:92,  reward:3,   r:6,  color:'#ff6d8a', shape:'dot' },
   fly:    { name:'Drone',  hp:52,   spd:78,  reward:10,  r:9,  color:'#7de8ff', shape:'fly', flying:true },
   boss:   { name:'BOSS',   hp:2300, spd:26,  reward:150, r:20, color:'#c78dff', shape:'boss', boss:true },
+  flyboss:{ name:'SKY TYRANT', hp:1900, spd:36, reward:130, r:18, color:'#ff5f9e', shape:'fly', boss:true, flying:true },
 };
 
 function waveScale(n){ return 1 + (n-1)*0.21 + Math.pow(n,1.55)*0.012; }
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+function buildWave(n){
+  const g=[];
+  const hpS = waveScale(n);
+  const rng = mulberry32(n*2654435761 + S.mapIdx*40503 + 13);
+  const pick = arr => arr[Math.floor(rng()*arr.length)];
+  const ri = (a,b) => a + Math.floor(rng()*(b-a+1));
+  const rf = (a,b) => a + rng()*(b-a);
+  const add=(type,count,gap,delay=0)=>{ if(count>0) g.push({type,count,gap:Math.max(0.12,gap),delay,t:delay,spawned:0,hpS}); };
+
+  if(n%10===0){ // BOSS waves: ground boss on 10/30/50…, flying boss on 20/40/60…
+    const fly = n%20===0;
+    add(fly?'flyboss':'boss', fly?1:Math.max(1,Math.floor(n/10)), 3.6, rf(1,2.5));
+    if(fly){ // sky tyrant escorts: drones + a ground pressure group
+      add('fly', ri(2,4)+Math.floor(n/3), rf(0.5,0.9), rf(0,2));
+      add('grunt', ri(3,6)+Math.floor(n*0.5), rf(0.45,0.8), rf(2,5));
+      if(n>=30) add(pick(['tank','swarm']), ri(2,5)+Math.floor(n*0.3), rf(0.3,0.6), rf(4,7));
+    } else {
+      add('grunt', ri(4,8)+Math.floor(n*0.6), rf(0.4,0.9), rf(0,2));
+      add(pick(['swarm','runner','tank']), ri(3,6)+Math.floor(n*0.4), rf(0.25,0.6), rf(3,7));
+      if(n>=6) add('fly', ri(1,2)+Math.floor(n/5), 0.8, rf(2,6));
+    }
+    g.sort((a,b)=>a.delay-b.delay);
+    return g;
+  }
+  const arch = n===1 ? 'intro' : pick(['gauntlet','sprint','barrage','pincer','fortress','blitz','gauntlet','pincer']);
+  if(arch==='intro'){
+    add('grunt', 5+n, rf(0.6,0.85), 0);
+  } else if(arch==='gauntlet'){ // steady escalating mix, one thing after another
+    let d=0;
+    add('grunt', ri(4,6)+Math.floor(n*0.9), rf(0.55,0.8), d); d+=rf(1.2,2.8);
+    if(n>=2) add('runner', ri(2,5)+Math.floor(n*0.8), rf(0.3,0.45), d); d+=rf(1.5,3);
+    if(n>=4) add('swarm', ri(4,8)+n, rf(0.18,0.28), d); d+=rf(1,2.5);
+    if(n>=5) add('tank', 1+Math.floor(n/3), rf(1.2,1.8), d);
+    if(n>=6 && rng()<0.7) add('fly', 1+Math.floor(n/3), rf(0.6,1), rf(1,d));
+  } else if(arch==='sprint'){ // fast and thin from the first second
+    add('runner', 4+n+ri(0,4), rf(0.25,0.4), 0);
+    add('grunt', Math.floor(n*0.8)+ri(2,4), rf(0.5,0.8), rf(1,3));
+    if(n>=6 && rng()<0.6) add('fly', 2+Math.floor(n/4), 0.7, rf(2,4));
+    if(n>=8 && rng()<0.4) add('swarm', 5+n, 0.2, rf(3,5));
+  } else if(arch==='barrage'){ // swarms in overlapping tidal waves
+    add('swarm', 6+Math.floor(n*1.3), rf(0.12,0.2), 0);
+    add('grunt', ri(3,6)+Math.floor(n*0.6), rf(0.5,0.8), rf(2,4));
+    add('swarm', 4+Math.floor(n*0.8), rf(0.15,0.25), rf(4,6.5));
+    if(n>=5) add('tank', Math.max(1,Math.floor(n/4)), 1.4, rf(5,7));
+  } else if(arch==='pincer'){ // two hits separated by a deceptive lull
+    const dl = rf(5,8);
+    add('grunt', ri(3,5)+Math.floor(n*0.7), rf(0.45,0.7), 0);
+    if(n>=2) add('runner', 2+Math.floor(n*0.6), 0.35, rf(0.5,1.2));
+    const t2 = n>=5?pick(['tank','swarm','fly']):'runner';
+    add(t2, t2==='tank' ? 2+Math.floor(n*0.3) : ri(4,7)+Math.floor(n*0.8), t2==='tank'?rf(1.1,1.6):rf(0.25,0.5), dl);
+    add('grunt', ri(3,6)+Math.floor(n*0.6), rf(0.4,0.6), dl+rf(1,2));
+    if(n>=6) add('fly', 1+Math.floor(n/4), 0.8, dl+rf(0,2));
+  } else if(arch==='fortress'){ // slow, tanky, armored pressure
+    add('grunt', ri(4,7)+Math.floor(n*0.8), rf(0.4,0.65), 0);
+    add('tank', 1+Math.floor(n/2.5), rf(1.1,1.7), rf(1.5,3));
+    if(n>=4) add('swarm', 4+n, 0.22, rf(4,6));
+    if(n>=6) add('fly', Math.max(1,Math.floor(n/4)), 1, rf(2,5));
+  } else { // 'blitz': everything at once, no rhythm to hide behind
+    const d=rf(0,1.2);
+    add('grunt', 4+Math.floor(n*1.2), rf(0.35,0.55), 0);
+    if(n>=2) add('runner', 3+n, rf(0.22,0.35), d);
+    if(n>=4) add('swarm', 5+n, rf(0.14,0.22), d+0.5);
+    if(n>=5) add('tank', Math.max(1,Math.floor(n/3)), 1.3, d+1.5);
+    if(n>=6) add('fly', 1+Math.floor(n/3.5), 0.75, d+0.8);
+  }
+  g.sort((a,b)=>a.delay-b.delay);
+  return g;
+}
 
 const DIFFS=[
   { key:'easy',      name:'Easy',      hp:0.85, spd:0.95, cash:1.25, lives:25, reward:1.1,  score:0.8  },
@@ -45,19 +117,6 @@ const DIFFS=[
   { key:'nightmare', name:'Nightmare', hp:2.1,  spd:1.25, cash:0.7,  lives:8,  reward:0.7,  score:2    },
 ];
 function D(){ return DIFFS.find(d=>d.key===S.diff) || DIFFS[1]; }
-
-function buildWave(n){
-  const g=[];
-  const hpS = waveScale(n);
-  const add=(type,count,gap,delay=0)=>g.push({type,count,gap,delay,t:delay,spawned:0,hpS});
-  add('grunt', 4+Math.floor(n*1.4), 0.72);
-  if(n>=2) add('runner', 3+n, 0.4, 2.4);
-  if(n>=4) add('swarm', 6+n, 0.22, 4);
-  if(n>=5) add('tank', Math.floor(n/3), 1.6, 5.5);
-  if(n>=6 && n%2===0) add('fly', 2+Math.floor(n/3), 0.85, 3.2);
-  if(n%10===0) add('boss', Math.floor(n/10), 3.2, 2);
-  return g;
-}
 
 function spawnEnemy(typeKey, hpS){
   const t = ENEMIES[typeKey];
