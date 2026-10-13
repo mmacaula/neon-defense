@@ -82,7 +82,7 @@ header .spacer{flex:1}
 .card .ds{font-size:10.5px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .card .key{position:absolute; top:6px; right:8px; font-size:9px; color:var(--dim); border:1px solid var(--line); border-radius:5px; padding:1px 5px}
 #hint{margin-top:9px; font-size:11px; color:var(--dim); text-align:center; letter-spacing:.3px}
-kbd{border:1px solid var(--line); border-radius:5px; padding:0 5px; background:rgba(255,255,255,.04); font-family:inherit}
+kbd{display:inline-block; font:700 9.5px/1.4 inherit; font-family:ui-monospace,Menlo,monospace; color:var(--dim); background:rgba(255,255,255,.06); border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 5px; margin-left:4px}
 #overlay{position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
   background:rgba(6,9,22,.82); backdrop-filter:blur(8px); text-align:center; padding:20px;}
 #overlay.hidden{display:none}
@@ -123,7 +123,7 @@ kbd{border:1px solid var(--line); border-radius:5px; padding:0 5px; background:r
 
   <div id="stage">
     <canvas id="game" width="960" height="600"></canvas>
-    <button class="btn hot" id="callWave">⚡ Call Wave <span id="cwBonus"></span></button>
+    <button class="btn hot" id="callWave">⚡ Call Wave <span id="cwBonus"></span> <kbd>N</kbd></button>
     <div id="banner"></div>
     <div id="toasts"></div>
     <div id="towerPanel" class="hidden">

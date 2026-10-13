@@ -82,7 +82,7 @@ header .spacer{flex:1}
 .card .ds{font-size:10.5px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .card .key{position:absolute; top:6px; right:8px; font-size:9px; color:var(--dim); border:1px solid var(--line); border-radius:5px; padding:1px 5px}
 #hint{margin-top:9px; font-size:11px; color:var(--dim); text-align:center; letter-spacing:.3px}
-kbd{border:1px solid var(--line); border-radius:5px; padding:0 5px; background:rgba(255,255,255,.04); font-family:inherit}
+kbd{display:inline-block; font:700 9.5px/1.4 inherit; font-family:ui-monospace,Menlo,monospace; color:var(--dim); background:rgba(255,255,255,.06); border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 5px; margin-left:4px}
 #overlay{position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
   background:rgba(6,9,22,.82); backdrop-filter:blur(8px); text-align:center; padding:20px;}
 #overlay.hidden{display:none}
@@ -123,7 +123,7 @@ kbd{border:1px solid var(--line); border-radius:5px; padding:0 5px; background:r
 
   <div id="stage">
     <canvas id="game" width="960" height="600"></canvas>
-    <button class="btn hot" id="callWave">⚡ Call Wave <span id="cwBonus"></span></button>
+    <button class="btn hot" id="callWave">⚡ Call Wave <span id="cwBonus"></span> <kbd>N</kbd></button>
     <div id="banner"></div>
     <div id="toasts"></div>
     <div id="towerPanel" class="hidden">
@@ -381,7 +381,8 @@ function startWave(){
   S.spawnQueue = buildWave(S.wave);
   S.spawnTimer = 0; S.waveActive = true; S.nextTimer = 0;
   banner(S.wave%10===0 ? '⚠ WAVE '+S.wave+' — BOSS' : 'WAVE '+S.wave);
-  if(S.wave===1) setTimeout(()=>toast('Tip: towers near corners hit enemies twice as long', false), 1200);
+  if(S.wave===1) setTimeout(()=>toast('Keys: 1-6 pick tower · U upgrade · X sell · N wave · Space pause · F speed · S save', false), 1200);
+  if(S.wave===2) setTimeout(()=>toast('Tip: towers near corners hit enemies twice as long', false), 1200);
   sfx.waveGo(); updateHUD();
 }
 
@@ -933,10 +934,10 @@ function showTowerPanel(t){
   else rows = `Dmg <b>${st.dmg}</b> · Rate <b>${st.rate}</b>/s<br>Range <b>${st.range}</b>${T.air?' · hits air':''}`;
   $('tpStats').innerHTML=rows;
   const up=$('tpUpgrade');
-  if(next){ up.style.display=''; up.textContent=`⬆ Upgrade $${next.cost}`; up.disabled=S.money<next.cost;
+  if(next){ up.style.display=''; up.innerHTML=`⬆ Upgrade $${next.cost} <kbd>U</kbd>`; up.disabled=S.money<next.cost;
     up.style.opacity=S.money<next.cost?0.45:1; }
   else { up.style.display='none'; }
-  $('tpSell').textContent = `Sell $${Math.floor(t.invested*0.7)}`;
+  $('tpSell').innerHTML = `Sell $${Math.floor(t.invested*0.7)} <kbd>X</kbd>`;
   p.classList.remove('hidden');
   const rect=cv.getBoundingClientRect(), sc=rect.width/W;
   let px=cv.offsetLeft + t.x*sc+24, py=cv.offsetTop + t.y*sc-60;
@@ -1010,6 +1011,8 @@ window.addEventListener('keydown',ev=>{
   if(k==='n' && !S.waveActive) callWave();
   if(k==='u' && S.towerSel) $('tpUpgrade').click();
   if(k==='x' && S.towerSel) $('tpSell').click();
+  if(k==='f'){ S.speed = S.speed===1?2:S.speed===2?3:1; setSpeedUI(); }
+  if(k==='s'){ saveGame(false); }
 });
 
 // ---------- buttons ----------

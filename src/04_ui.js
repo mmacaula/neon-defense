@@ -55,10 +55,10 @@ function showTowerPanel(t){
   else rows = `Dmg <b>${st.dmg}</b> · Rate <b>${st.rate}</b>/s<br>Range <b>${st.range}</b>${T.air?' · hits air':''}`;
   $('tpStats').innerHTML=rows;
   const up=$('tpUpgrade');
-  if(next){ up.style.display=''; up.textContent=`⬆ Upgrade $${next.cost}`; up.disabled=S.money<next.cost;
+  if(next){ up.style.display=''; up.innerHTML=`⬆ Upgrade $${next.cost} <kbd>U</kbd>`; up.disabled=S.money<next.cost;
     up.style.opacity=S.money<next.cost?0.45:1; }
   else { up.style.display='none'; }
-  $('tpSell').textContent = `Sell $${Math.floor(t.invested*0.7)}`;
+  $('tpSell').innerHTML = `Sell $${Math.floor(t.invested*0.7)} <kbd>X</kbd>`;
   p.classList.remove('hidden');
   const rect=cv.getBoundingClientRect(), sc=rect.width/W;
   let px=cv.offsetLeft + t.x*sc+24, py=cv.offsetTop + t.y*sc-60;
@@ -132,6 +132,8 @@ window.addEventListener('keydown',ev=>{
   if(k==='n' && !S.waveActive) callWave();
   if(k==='u' && S.towerSel) $('tpUpgrade').click();
   if(k==='x' && S.towerSel) $('tpSell').click();
+  if(k==='f'){ S.speed = S.speed===1?2:S.speed===2?3:1; setSpeedUI(); }
+  if(k==='s'){ saveGame(false); }
 });
 
 // ---------- buttons ----------

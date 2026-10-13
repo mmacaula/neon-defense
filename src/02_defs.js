@@ -68,7 +68,8 @@ function startWave(){
   S.spawnQueue = buildWave(S.wave);
   S.spawnTimer = 0; S.waveActive = true; S.nextTimer = 0;
   banner(S.wave%10===0 ? '⚠ WAVE '+S.wave+' — BOSS' : 'WAVE '+S.wave);
-  if(S.wave===1) setTimeout(()=>toast('Tip: towers near corners hit enemies twice as long', false), 1200);
+  if(S.wave===1) setTimeout(()=>toast('Keys: 1-6 pick tower · U upgrade · X sell · N wave · Space pause · F speed · S save', false), 1200);
+  if(S.wave===2) setTimeout(()=>toast('Tip: towers near corners hit enemies twice as long', false), 1200);
   sfx.waveGo(); updateHUD();
 }
 
