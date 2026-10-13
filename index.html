@@ -1011,7 +1011,7 @@ window.addEventListener('keydown',ev=>{
   if(k==='n' && !S.waveActive) callWave();
   if(k==='u' && S.towerSel) $('tpUpgrade').click();
   if(k==='x' && S.towerSel) $('tpSell').click();
-  if(k==='f'){ S.speed = S.speed===1?2:S.speed===2?3:1; setSpeedUI(); }
+  if(k==='f'){ cycleSpeed(); }
   if(k==='s'){ saveGame(false); }
 });
 
@@ -1023,7 +1023,7 @@ function callWave(){
   startWave(); updateHUD();
 }
 $('callWave').addEventListener('click',callWave);
-$('btnSpeed').addEventListener('click',()=>{ S.speed = S.speed===1?2:S.speed===2?3:1; setSpeedUI(); });
+$('btnSpeed').addEventListener('click',()=>{ cycleSpeed(); });
 function setSpeedUI(){ $('btnSpeed').textContent = S.paused?'⏸':'▶ '+S.speed+'×'; }
 function togglePause(){ S.paused=!S.paused; $('btnPause').textContent=S.paused?'▶':'⏸'; setSpeedUI(); if(!S.paused) last=performance.now(); }
 $('btnPause').addEventListener('click',togglePause);
@@ -1125,12 +1125,15 @@ function gameOver(){
 
 // ---------- main loop ----------
 let last=performance.now(), hudAcc=0;
+const SPEEDS=[1,2,3,5,8];
+function cycleSpeed(){ S.speed = SPEEDS[(SPEEDS.indexOf(S.speed)+1)%SPEEDS.length]; setSpeedUI(); }
 function loop(now){
   requestAnimationFrame(loop);
   let dt=(now-last)/1000; last=now;
   dt=Math.min(dt,0.05);
   if(S.phase==='playing' && !S.paused){
-    update(dt*S.speed);
+    let sim=dt*S.speed; const MAXH=1/40;
+    while(sim>1e-4){ const h=Math.min(sim,MAXH); update(h); sim-=h; }
     hudAcc+=dt;
     if(hudAcc>0.25){ hudAcc=0; updateHUD(); }
   }
