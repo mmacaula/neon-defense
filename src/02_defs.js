@@ -38,6 +38,14 @@ const ENEMIES = {
 
 function waveScale(n){ return 1 + (n-1)*0.21 + Math.pow(n,1.55)*0.012; }
 
+const DIFFS=[
+  { key:'easy',      name:'Easy',      hp:0.85, spd:0.95, cash:1.25, lives:25, reward:1.1,  score:0.8  },
+  { key:'normal',    name:'Normal',    hp:1,    spd:1,    cash:1,    lives:20, reward:1,    score:1    },
+  { key:'hard',      name:'Hard',      hp:1.45, spd:1.12, cash:0.85, lives:12, reward:0.85, score:1.4  },
+  { key:'nightmare', name:'Nightmare', hp:2.1,  spd:1.25, cash:0.7,  lives:8,  reward:0.7,  score:2    },
+];
+function D(){ return DIFFS.find(d=>d.key===S.diff) || DIFFS[1]; }
+
 function buildWave(n){
   const g=[];
   const hpS = waveScale(n);
@@ -54,12 +62,12 @@ function buildWave(n){
 function spawnEnemy(typeKey, hpS){
   const t = ENEMIES[typeKey];
   const pts = S.map.pts;
-  const hp = t.hp * (t.boss ? hpS*1.15 : hpS);
+  const hp = t.hp * (t.boss ? hpS*1.15 : hpS) * D().hp;
   let wp;
   if(t.flying){ wp=[{x:pts[0].x,y:pts[0].y},{x:S.map.base.x,y:S.map.base.y}]; }
   else wp=pts;
   S.enemies.push({ key:typeKey, def:t, hp, maxHp:hp, x:wp[0].x, y:wp[0].y,
-    wpi:1, wp, speed:t.spd, r:t.r, progress:0, slow:1, burn:null, dead:false,
+    wpi:1, wp, speed:t.spd*D().spd, r:t.r, progress:0, slow:1, burn:null, dead:false,
     wob:rnd(TAU), hitT:0 });
 }
 
@@ -81,8 +89,8 @@ function damageEnemy(e, amt){
 }
 function killEnemy(e){
   e.dead = true;
-  const reward = Math.round(e.def.reward * (1 + S.wave*0.04));
-  S.money += reward; S.score += reward*2; S.kills++;
+  const reward = Math.round(e.def.reward * (1 + S.wave*0.04) * D().reward);
+  S.money += reward; S.score += Math.round(reward*2*D().score); S.kills++;
   floatText(e.x, e.y-e.r-6, '+'+reward, '#ffd35a');
   const n = e.def.boss ? 34 : 10;
   for(let i=0;i<n;i++) burst(e.x,e.y,e.def.color, e.def.boss?3:1.6);

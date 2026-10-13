@@ -7,6 +7,10 @@ function updateHUD(){
   $('hudLives').textContent = Math.max(0,S.lives);
   $('hudWave').textContent = S.wave;
   $('hudScore').textContent = fmt(S.score);
+  const hd=$('hudDiff'), dd=DIFFS.find(x=>x.key===S.diff);
+  if(dd && S.phase==='playing'){ hd.parentElement.style.display=''; hd.textContent=dd.name;
+    hd.className='diff '+({easy:'Easy',normal:'Medium',hard:'Hard',nightmare:'Hard'})[dd.key]; }
+  else hd.parentElement.style.display='none';
   const cw=$('callWave');
   if(S.phase!=='playing'){ cw.style.display='none'; }
   else if(S.waveActive){ cw.style.display='none'; }
@@ -155,7 +159,7 @@ $('btnMenu').addEventListener('click',showMenu);
 const SAVE_KEY='neon-de…e-v1';
 function saveGame(quiet){
   if(S.phase!=='playing' || !S.map) return;
-  const snap = { v:1, map:S.mapIdx, money:Math.round(S.money), lives:S.lives, score:S.score,
+  const snap = { v:1, map:S.mapIdx, diff:S.diff||'normal', money:Math.round(S.money), lives:S.lives, score:S.score,
     waveDone: S.waveActive ? Math.max(0,S.wave-1) : S.wave,
     towers: S.towers.map(t=>[t.key,t.c,t.r,t.level,Math.round(t.invested)]) };
   try{
@@ -169,7 +173,7 @@ function getSave(){
 }
 function loadGame(snap){
   if(!snap) return;
-  resetGame(snap.map);
+  resetGame(snap.map, snap.diff||'normal');
   S.money=snap.money; S.lives=snap.lives; S.score=snap.score; S.wave=snap.waveDone;
   for(const [k,c,r,l,inv] of snap.towers){
     if(!canPlace(c,r)) continue;
@@ -184,19 +188,24 @@ window.addEventListener('beforeunload',()=>{ if(S.phase==='playing') saveGame(tr
 // ---------- overlay / menu / game over ----------
 function showMenu(){
   S.phase='menu'; hideTowerPanel(); selectShop(null);
+  S.menuDiff = S.menuDiff || 'normal';
   $('ovTitle').textContent='NEON DEFENSE';
   $('ovSub').textContent='Pick a battlefield. Hold the line.';
   $('finalStats').innerHTML='';
   $('bestLine').textContent = S.best? 'Best score: '+fmt(S.best) : '';
   const maps=$('maps'); maps.innerHTML='';
+  const dsel=$('diffRow');
+  dsel.innerHTML = DIFFS.map(d=>`<button class="dopt ${d.key===S.menuDiff?'on':''}" data-d="${d.key}">${d.name}</button>`).join('')
+    + '<span class="dhint">'+({easy:'softer enemies, more cash',normal:'the intended fight',hard:'tougher, faster, fewer lives',nightmare:'brutal · double HP · 8 lives · double score'})[S.menuDiff]+'</span>';
+  dsel.querySelectorAll('.dopt').forEach(b=>b.onclick=()=>{ S.menuDiff=b.dataset.d; showMenu(); sfx.coin(); });
   const snap = getSave();
   if(snap && Number.isFinite(snap.map)){
     const el=document.createElement('div'); el.className='mapcard';
     el.style.borderColor='rgba(120,255,170,.45)';
     const cvr=document.createElement('canvas'); cvr.width=420; cvr.height=176;
     el.appendChild(cvr);
-    el.insertAdjacentHTML('beforeend',`<div class="mn">Resume<span class="diff Easy">Wave ${snap.waveDone}</span></div><div class="md">${MAPS[snap.map].name} · ${snap.towers.length} towers · $${fmt(snap.money)}</div>`);
-    el.addEventListener('click',()=>{ initAudio(); loadGame(getSave()); overlay.classList.add('hidden'); banner('RESUMED'); });
+    el.insertAdjacentHTML('beforeend',`<div class="mn">Resume<span class="diff ${({easy:'Easy',normal:'Medium',hard:'Hard',nightmare:'Hard'})[snap.diff||'normal']}">${({easy:'Easy',normal:'Normal',hard:'Hard',nightmare:'Nightmare'})[snap.diff||'normal']} · Wave ${snap.waveDone}</span></div><div class="md">${MAPS[snap.map].name} · ${snap.towers.length} towers · $${fmt(snap.money)}</div>`);
+    el.addEventListener('click',()=>{ initAudio(); const sn=getSave(); if(sn) S.menuDiff=sn.diff||'normal'; loadGame(sn); overlay.classList.add('hidden'); banner('RESUMED'); });
     ((canvas,idx)=>requestAnimationFrame(()=>drawMapPreview(canvas.getContext('2d'),idx)))(cvr, snap.map);
     maps.appendChild(el);
   }
@@ -205,7 +214,7 @@ function showMenu(){
     const cvp=document.createElement('canvas'); cvp.width=420; cvp.height=176;
     el.appendChild(cvp);
     el.insertAdjacentHTML('beforeend',`<div class="mn">${m.name}<span class="diff ${m.diff}">${m.diff}</span></div><div class="md">${['A classic winding road.','The road coils to the core.','Full zigzag. Nowhere to breathe.'][i]}</div>`);
-    el.addEventListener('click',()=>{ initAudio(); resetGame(i); overlay.classList.add('hidden'); banner('DEFEND THE CORE'); });
+    el.addEventListener('click',()=>{ initAudio(); resetGame(i, S.menuDiff||'normal'); overlay.classList.add('hidden'); banner('DEFEND THE CORE'); });
     ((canvas, idx) => requestAnimationFrame(()=>drawMapPreview(canvas.getContext('2d'), idx)))(cvp, i);
     maps.appendChild(el);
   });
@@ -237,7 +246,7 @@ function gameOver(){
     btn.style.cssText='font-size:17px';
     btn.innerHTML='<button class="btn hot" style="font-size:16px;padding:12px 30px">↻ Retry</button> <button class="btn" style="font-size:16px;padding:12px 30px">Maps</button>';
     const [retry,mapsBtn]=btn.querySelectorAll('button');
-    retry.onclick=()=>{ resetGame(S.mapIdx); overlay.classList.add('hidden'); };
+    retry.onclick=()=>{ resetGame(S.mapIdx, S.diff); overlay.classList.add('hidden'); };
     mapsBtn.onclick=showMenu;
     maps.appendChild(btn);
     overlay.classList.remove('hidden');

@@ -56,9 +56,11 @@ const S = {
 };
 try{ S.best = +(localStorage.getItem('neon-defense-best')||0); }catch(e){}
 
-function resetGame(mapIdx){
+function resetGame(mapIdx, diff){
   S.mapIdx=mapIdx; S.map=buildMap(mapIdx);
-  S.money=240; S.lives=20; S.score=0; S.wave=0; S.speed=1; S.paused=false;
+  S.diff = diff || 'normal';
+  const d = DIFFS.find(x=>x.key===S.diff) || DIFFS[1];
+  S.money=Math.round(240*d.cash/10)*10; S.lives=d.lives; S.score=0; S.wave=0; S.speed=1; S.paused=false;
   S.enemies=[]; S.towers=[]; S.bullets=[]; S.parts=[]; S.texts=[]; S.bolts=[]; S.tracers=[]; S.booms=[];
   S.spawnQueue=[]; S.spawnTimer=0; S.waveActive=false; S.nextTimer=0;
   S.sel=null; S.towerSel=null; S.kills=0; S.phase='playing';

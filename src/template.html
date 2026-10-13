@@ -97,8 +97,13 @@ kbd{display:inline-block; font:700 9.5px/1.4 inherit; font-family:ui-monospace,M
 .mapcard:hover{transform:translateY(-4px) scale(1.02); border-color:rgba(140,180,255,.5); box-shadow:0 14px 34px rgba(0,0,0,.5), 0 0 24px rgba(90,130,255,.2)}
 .mapcard canvas{width:100%; height:88px; border-radius:10px; background:#0b1128; margin-bottom:9px; border:1px solid rgba(0,0,0,.4)}
 .mapcard .mn{font-weight:800; font-size:15px} .mapcard .md{font-size:11.5px; color:var(--dim)}
+.diff{font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px}
 .mapcard .diff{float:right; font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px}
 .diff.Easy{background:rgba(60,220,130,.15); color:#7dffb0}.diff.Medium{background:rgba(255,200,80,.15); color:#ffd35a}.diff.Hard{background:rgba(255,90,110,.15); color:#ff9aae}
+.dopt{cursor:pointer; font:700 13px inherit; letter-spacing:.4px; color:var(--dim); background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:999px; padding:7px 18px; transition:all .15s}
+.dopt:hover{color:#fff; border-color:rgba(120,200,255,.4)}
+.dopt.on{color:#04101c; background:linear-gradient(135deg,#6fe3ff,#4aa8ff); border-color:transparent; box-shadow:0 0 14px rgba(90,209,255,.35)}
+.dhint{font-size:11.5px; color:var(--dim); margin-left:6px; font-style:italic}
 #finalStats{font-size:15px; line-height:2; color:var(--dim)}
 #finalStats b{color:var(--text); font-size:18px}
 #bestLine{font-size:12.5px; color:var(--gold)}
@@ -112,6 +117,7 @@ kbd{display:inline-block; font:700 9.5px/1.4 inherit; font-family:ui-monospace,M
     <div class="pill"><span class="ic gold"></span><span id="hudMoney">0</span></div>
     <div class="pill"><span class="ic life"></span><span id="hudLives">0</span></div>
     <div class="pill"><span class="ic wave"></span>Wave <span id="hudWave">0</span></div>
+    <div class="pill"><span class="diff" id="hudDiff" style="display:none"></span></div>
     <div class="pill"><span class="ic star"></span><span id="hudScore">0</span></div>
     <div class="spacer"></div>
     <button class="btn" id="btnSpeed">▶ 1×</button>
@@ -139,6 +145,7 @@ kbd{display:inline-block; font:700 9.5px/1.4 inherit; font-family:ui-monospace,M
       <div class="sub" id="ovSub">Pick a battlefield. Hold the line.</div>
       <div id="finalStats"></div>
       <div id="bestLine"></div>
+      <div id="diffRow" style="display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:-6px"></div>
       <div id="maps"></div>
       <div id="ovBtns"></div>
     </div>

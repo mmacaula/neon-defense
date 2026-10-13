@@ -97,8 +97,13 @@ kbd{display:inline-block; font:700 9.5px/1.4 inherit; font-family:ui-monospace,M
 .mapcard:hover{transform:translateY(-4px) scale(1.02); border-color:rgba(140,180,255,.5); box-shadow:0 14px 34px rgba(0,0,0,.5), 0 0 24px rgba(90,130,255,.2)}
 .mapcard canvas{width:100%; height:88px; border-radius:10px; background:#0b1128; margin-bottom:9px; border:1px solid rgba(0,0,0,.4)}
 .mapcard .mn{font-weight:800; font-size:15px} .mapcard .md{font-size:11.5px; color:var(--dim)}
+.diff{font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px}
 .mapcard .diff{float:right; font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px}
 .diff.Easy{background:rgba(60,220,130,.15); color:#7dffb0}.diff.Medium{background:rgba(255,200,80,.15); color:#ffd35a}.diff.Hard{background:rgba(255,90,110,.15); color:#ff9aae}
+.dopt{cursor:pointer; font:700 13px inherit; letter-spacing:.4px; color:var(--dim); background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:999px; padding:7px 18px; transition:all .15s}
+.dopt:hover{color:#fff; border-color:rgba(120,200,255,.4)}
+.dopt.on{color:#04101c; background:linear-gradient(135deg,#6fe3ff,#4aa8ff); border-color:transparent; box-shadow:0 0 14px rgba(90,209,255,.35)}
+.dhint{font-size:11.5px; color:var(--dim); margin-left:6px; font-style:italic}
 #finalStats{font-size:15px; line-height:2; color:var(--dim)}
 #finalStats b{color:var(--text); font-size:18px}
 #bestLine{font-size:12.5px; color:var(--gold)}
@@ -112,6 +117,7 @@ kbd{display:inline-block; font:700 9.5px/1.4 inherit; font-family:ui-monospace,M
     <div class="pill"><span class="ic gold"></span><span id="hudMoney">0</span></div>
     <div class="pill"><span class="ic life"></span><span id="hudLives">0</span></div>
     <div class="pill"><span class="ic wave"></span>Wave <span id="hudWave">0</span></div>
+    <div class="pill"><span class="diff" id="hudDiff" style="display:none"></span></div>
     <div class="pill"><span class="ic star"></span><span id="hudScore">0</span></div>
     <div class="spacer"></div>
     <button class="btn" id="btnSpeed">▶ 1×</button>
@@ -139,6 +145,7 @@ kbd{display:inline-block; font:700 9.5px/1.4 inherit; font-family:ui-monospace,M
       <div class="sub" id="ovSub">Pick a battlefield. Hold the line.</div>
       <div id="finalStats"></div>
       <div id="bestLine"></div>
+      <div id="diffRow" style="display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:-6px"></div>
       <div id="maps"></div>
       <div id="ovBtns"></div>
     </div>
@@ -206,9 +213,11 @@ const S = {
 };
 try{ S.best = +(localStorage.getItem('neon-defense-best')||0); }catch(e){}
 
-function resetGame(mapIdx){
+function resetGame(mapIdx, diff){
   S.mapIdx=mapIdx; S.map=buildMap(mapIdx);
-  S.money=240; S.lives=20; S.score=0; S.wave=0; S.speed=1; S.paused=false;
+  S.diff = diff || 'normal';
+  const d = DIFFS.find(x=>x.key===S.diff) || DIFFS[1];
+  S.money=Math.round(240*d.cash/10)*10; S.lives=d.lives; S.score=0; S.wave=0; S.speed=1; S.paused=false;
   S.enemies=[]; S.towers=[]; S.bullets=[]; S.parts=[]; S.texts=[]; S.bolts=[]; S.tracers=[]; S.booms=[];
   S.spawnQueue=[]; S.spawnTimer=0; S.waveActive=false; S.nextTimer=0;
   S.sel=null; S.towerSel=null; S.kills=0; S.phase='playing';
@@ -351,6 +360,14 @@ const ENEMIES = {
 
 function waveScale(n){ return 1 + (n-1)*0.21 + Math.pow(n,1.55)*0.012; }
 
+const DIFFS=[
+  { key:'easy',      name:'Easy',      hp:0.85, spd:0.95, cash:1.25, lives:25, reward:1.1,  score:0.8  },
+  { key:'normal',    name:'Normal',    hp:1,    spd:1,    cash:1,    lives:20, reward:1,    score:1    },
+  { key:'hard',      name:'Hard',      hp:1.45, spd:1.12, cash:0.85, lives:12, reward:0.85, score:1.4  },
+  { key:'nightmare', name:'Nightmare', hp:2.1,  spd:1.25, cash:0.7,  lives:8,  reward:0.7,  score:2    },
+];
+function D(){ return DIFFS.find(d=>d.key===S.diff) || DIFFS[1]; }
+
 function buildWave(n){
   const g=[];
   const hpS = waveScale(n);
@@ -367,12 +384,12 @@ function buildWave(n){
 function spawnEnemy(typeKey, hpS){
   const t = ENEMIES[typeKey];
   const pts = S.map.pts;
-  const hp = t.hp * (t.boss ? hpS*1.15 : hpS);
+  const hp = t.hp * (t.boss ? hpS*1.15 : hpS) * D().hp;
   let wp;
   if(t.flying){ wp=[{x:pts[0].x,y:pts[0].y},{x:S.map.base.x,y:S.map.base.y}]; }
   else wp=pts;
   S.enemies.push({ key:typeKey, def:t, hp, maxHp:hp, x:wp[0].x, y:wp[0].y,
-    wpi:1, wp, speed:t.spd, r:t.r, progress:0, slow:1, burn:null, dead:false,
+    wpi:1, wp, speed:t.spd*D().spd, r:t.r, progress:0, slow:1, burn:null, dead:false,
     wob:rnd(TAU), hitT:0 });
 }
 
@@ -394,8 +411,8 @@ function damageEnemy(e, amt){
 }
 function killEnemy(e){
   e.dead = true;
-  const reward = Math.round(e.def.reward * (1 + S.wave*0.04));
-  S.money += reward; S.score += reward*2; S.kills++;
+  const reward = Math.round(e.def.reward * (1 + S.wave*0.04) * D().reward);
+  S.money += reward; S.score += Math.round(reward*2*D().score); S.kills++;
   floatText(e.x, e.y-e.r-6, '+'+reward, '#ffd35a');
   const n = e.def.boss ? 34 : 10;
   for(let i=0;i<n;i++) burst(e.x,e.y,e.def.color, e.def.boss?3:1.6);
@@ -886,6 +903,10 @@ function updateHUD(){
   $('hudLives').textContent = Math.max(0,S.lives);
   $('hudWave').textContent = S.wave;
   $('hudScore').textContent = fmt(S.score);
+  const hd=$('hudDiff'), dd=DIFFS.find(x=>x.key===S.diff);
+  if(dd && S.phase==='playing'){ hd.parentElement.style.display=''; hd.textContent=dd.name;
+    hd.className='diff '+({easy:'Easy',normal:'Medium',hard:'Hard',nightmare:'Hard'})[dd.key]; }
+  else hd.parentElement.style.display='none';
   const cw=$('callWave');
   if(S.phase!=='playing'){ cw.style.display='none'; }
   else if(S.waveActive){ cw.style.display='none'; }
@@ -1034,7 +1055,7 @@ $('btnMenu').addEventListener('click',showMenu);
 const SAVE_KEY='neon-de…e-v1';
 function saveGame(quiet){
   if(S.phase!=='playing' || !S.map) return;
-  const snap = { v:1, map:S.mapIdx, money:Math.round(S.money), lives:S.lives, score:S.score,
+  const snap = { v:1, map:S.mapIdx, diff:S.diff||'normal', money:Math.round(S.money), lives:S.lives, score:S.score,
     waveDone: S.waveActive ? Math.max(0,S.wave-1) : S.wave,
     towers: S.towers.map(t=>[t.key,t.c,t.r,t.level,Math.round(t.invested)]) };
   try{
@@ -1048,7 +1069,7 @@ function getSave(){
 }
 function loadGame(snap){
   if(!snap) return;
-  resetGame(snap.map);
+  resetGame(snap.map, snap.diff||'normal');
   S.money=snap.money; S.lives=snap.lives; S.score=snap.score; S.wave=snap.waveDone;
   for(const [k,c,r,l,inv] of snap.towers){
     if(!canPlace(c,r)) continue;
@@ -1063,19 +1084,24 @@ window.addEventListener('beforeunload',()=>{ if(S.phase==='playing') saveGame(tr
 // ---------- overlay / menu / game over ----------
 function showMenu(){
   S.phase='menu'; hideTowerPanel(); selectShop(null);
+  S.menuDiff = S.menuDiff || 'normal';
   $('ovTitle').textContent='NEON DEFENSE';
   $('ovSub').textContent='Pick a battlefield. Hold the line.';
   $('finalStats').innerHTML='';
   $('bestLine').textContent = S.best? 'Best score: '+fmt(S.best) : '';
   const maps=$('maps'); maps.innerHTML='';
+  const dsel=$('diffRow');
+  dsel.innerHTML = DIFFS.map(d=>`<button class="dopt ${d.key===S.menuDiff?'on':''}" data-d="${d.key}">${d.name}</button>`).join('')
+    + '<span class="dhint">'+({easy:'softer enemies, more cash',normal:'the intended fight',hard:'tougher, faster, fewer lives',nightmare:'brutal · double HP · 8 lives · double score'})[S.menuDiff]+'</span>';
+  dsel.querySelectorAll('.dopt').forEach(b=>b.onclick=()=>{ S.menuDiff=b.dataset.d; showMenu(); sfx.coin(); });
   const snap = getSave();
   if(snap && Number.isFinite(snap.map)){
     const el=document.createElement('div'); el.className='mapcard';
     el.style.borderColor='rgba(120,255,170,.45)';
     const cvr=document.createElement('canvas'); cvr.width=420; cvr.height=176;
     el.appendChild(cvr);
-    el.insertAdjacentHTML('beforeend',`<div class="mn">Resume<span class="diff Easy">Wave ${snap.waveDone}</span></div><div class="md">${MAPS[snap.map].name} · ${snap.towers.length} towers · $${fmt(snap.money)}</div>`);
-    el.addEventListener('click',()=>{ initAudio(); loadGame(getSave()); overlay.classList.add('hidden'); banner('RESUMED'); });
+    el.insertAdjacentHTML('beforeend',`<div class="mn">Resume<span class="diff ${({easy:'Easy',normal:'Medium',hard:'Hard',nightmare:'Hard'})[snap.diff||'normal']}">${({easy:'Easy',normal:'Normal',hard:'Hard',nightmare:'Nightmare'})[snap.diff||'normal']} · Wave ${snap.waveDone}</span></div><div class="md">${MAPS[snap.map].name} · ${snap.towers.length} towers · $${fmt(snap.money)}</div>`);
+    el.addEventListener('click',()=>{ initAudio(); const sn=getSave(); if(sn) S.menuDiff=sn.diff||'normal'; loadGame(sn); overlay.classList.add('hidden'); banner('RESUMED'); });
     ((canvas,idx)=>requestAnimationFrame(()=>drawMapPreview(canvas.getContext('2d'),idx)))(cvr, snap.map);
     maps.appendChild(el);
   }
@@ -1084,7 +1110,7 @@ function showMenu(){
     const cvp=document.createElement('canvas'); cvp.width=420; cvp.height=176;
     el.appendChild(cvp);
     el.insertAdjacentHTML('beforeend',`<div class="mn">${m.name}<span class="diff ${m.diff}">${m.diff}</span></div><div class="md">${['A classic winding road.','The road coils to the core.','Full zigzag. Nowhere to breathe.'][i]}</div>`);
-    el.addEventListener('click',()=>{ initAudio(); resetGame(i); overlay.classList.add('hidden'); banner('DEFEND THE CORE'); });
+    el.addEventListener('click',()=>{ initAudio(); resetGame(i, S.menuDiff||'normal'); overlay.classList.add('hidden'); banner('DEFEND THE CORE'); });
     ((canvas, idx) => requestAnimationFrame(()=>drawMapPreview(canvas.getContext('2d'), idx)))(cvp, i);
     maps.appendChild(el);
   });
@@ -1116,7 +1142,7 @@ function gameOver(){
     btn.style.cssText='font-size:17px';
     btn.innerHTML='<button class="btn hot" style="font-size:16px;padding:12px 30px">↻ Retry</button> <button class="btn" style="font-size:16px;padding:12px 30px">Maps</button>';
     const [retry,mapsBtn]=btn.querySelectorAll('button');
-    retry.onclick=()=>{ resetGame(S.mapIdx); overlay.classList.add('hidden'); };
+    retry.onclick=()=>{ resetGame(S.mapIdx, S.diff); overlay.classList.add('hidden'); };
     mapsBtn.onclick=showMenu;
     maps.appendChild(btn);
     overlay.classList.remove('hidden');
